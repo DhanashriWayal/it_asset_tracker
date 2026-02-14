@@ -1,10 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-server me-2"></i>Asset Catalog</h1>
+    <a href="{{ url_for('add_asset') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Add Asset
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>IP Address</th>
+                        <th>Location</th>
+                        <th>Last Ping</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in assets %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('asset_detail', id=asset.id) }}" class="text-decoration-none fw-bold">
+                                <i class="bi bi-{% if asset.asset_type == 'Server' %}hdd-network{% elif asset.asset_type == 'Laptop' %}laptop{% elif asset.asset_type == 'Router' %}wifi{% else %}box{% endif %} me-2"></i>
+                                {{ asset.name }}
+                            </a>
+                        </td>
+                        <td>{{ asset.asset_type }}</td>
+                        <td>
+                            {% if asset.ip_address %}
+                                <span class="badge bg-light text-dark">{{ asset.ip_address }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ asset.location or '—' }}</td>
+                        <td>
+                            {% set last_log = asset.availability_logs|sort(attribute='timestamp', reverse=True)|first %}
+                            {% if last_log %}
+                                {% if last_log.status == 'up' %}
+                                    <span class="badge bg-success"><i class="bi bi-arrow-up-circle me-1"></i>Up</span>
+                                {% else %}
+                                    <span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Down</span>
+                                {% endif %}
+                                <small class="text-muted d-block">{{ last_log.timestamp.strftime('%H:%M %d/%m') }}</small>
+                            {% else %}
+                                <span class="badge bg-secondary">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('edit_asset', id=asset.id) }}" class="btn btn-sm btn-outline-warning" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{{ url_for('check_availability', id=asset.id) }}" class="btn btn-sm btn-outline-info" title="Ping now">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </a>
+                            <a href="{{ url_for('delete_asset', id=asset.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?')" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,10 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Add Backup Log for {{ asset.name }}</h1>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+        {{ form.backup_date.label(class="form-label") }}
+        {{ form.backup_date(class="form-control", type="date") }}
+    </div>
+    <div class="mb-3">
+        {{ form.status.label(class="form-label") }}
+        {{ form.status(class="form-select") }}
+    </div>
+    <div class="mb-3">
+        {{ form.location.label(class="form-label") }}
+        {{ form.location(class="form-control") }}
+    </div>
+    <div class="mb-3">
+        {{ form.notes.label(class="form-label") }}
+        {{ form.notes(class="form-control", rows=3) }}
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+    <a href="{{ url_for('asset_detail', id=asset.id) }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

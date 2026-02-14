@@ -1,10 +1,228 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-{% if asset.asset_type == 'Server' %}hdd-network{% elif asset.asset_type == 'Laptop' %}laptop{% elif asset.asset_type == 'Router' %}wifi{% else %}box{% endif %} me-2"></i>
+        {{ asset.name }}
+        <small class="text-muted fs-5">({{ asset.asset_type }})</small>
+    </h1>
+    <div>
+        <a href="{{ url_for('edit_asset', id=asset.id) }}" class="btn btn-warning">
+            <i class="bi bi-pencil me-1"></i>Edit
+        </a>
+        <a href="{{ url_for('check_availability', id=asset.id) }}" class="btn btn-info">
+            <i class="bi bi-arrow-repeat me-1"></i>Ping Now
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Column: Details + Security Notes -->
+    <div class="col-md-5">
+        <!-- Details Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Details
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th style="width: 120px;">IP Address:</th>
+                        <td>{{ asset.ip_address or '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Location:</th>
+                        <td>{{ asset.location or '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Purchase Date:</th>
+                        <td>{{ asset.purchase_date or '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Notes:</th>
+                        <td>{{ asset.notes or '—' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Security Notes Card (scrollable if many) -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-shield-shaded me-2"></i>Security Notes</span>
+                <a href="{{ url_for('add_security_note', id=asset.id) }}" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-plus-lg me-1"></i>Add Note
+                </a>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                {% if asset.security_notes %}
+                    {% for note in asset.security_notes|sort(attribute='date', reverse=True) %}
+                        <div class="border-bottom pb-2 mb-2">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ note.date }}</strong>
+                                <span class="badge bg-{{ 'danger' if note.severity == 'High' else 'warning' if note.severity == 'Medium' else 'info' }}">
+                                    {{ note.severity }}
+                                </span>
+                            </div>
+                            <p class="mb-0 mt-1">{{ note.note }}</p>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No security notes yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Availability, Capacity, Backups -->
+    <div class="col-md-7">
+        <!-- Availability History Card (scrollable table) -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-bar-chart-line me-2"></i>Availability History
+            </div>
+            <div class="card-body" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Response (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in asset.availability_logs|sort(attribute='timestamp', reverse=True) %}
+                        <tr>
+                            <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if log.status == 'up' %}
+                                    <span class="badge bg-success"><i class="bi bi-arrow-up-circle me-1"></i>Up</span>
+                                {% else %}
+                                    <span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Down</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.response_time if log.response_time else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Capacity Records Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-database me-2"></i>Capacity Records</span>
+                <a href="{{ url_for('add_capacity', id=asset.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Add Record
+                </a>
+            </div>
+            <div class="card-body">
+                {% if asset.capacity_records %}
+                    <!-- Chart with fixed height -->
+                    <canvas id="capacityChart" style="max-height: 150px; width: 100%;"></canvas>
+                    <!-- Scrollable table -->
+                    <div style="max-height: 200px; overflow-y: auto; margin-top: 1rem;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Total (GB)</th>
+                                    <th>Used (GB)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rec in asset.capacity_records|sort(attribute='date', reverse=True) %}
+                                <tr>
+                                    <td>{{ rec.date }}</td>
+                                    <td>{{ rec.total_gb }}</td>
+                                    <td>{{ rec.used_gb }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <script>
+                        const ctx = document.getElementById('capacityChart').getContext('2d');
+                        const capacityData = {
+                            labels: [{% for rec in asset.capacity_records|sort(attribute='date') %}'{{ rec.date }}',{% endfor %}],
+                            datasets: [{
+                                label: 'Used GB',
+                                data: [{% for rec in asset.capacity_records|sort(attribute='date') %}{{ rec.used_gb }},{% endfor %}],
+                                backgroundColor: 'rgba(20, 184, 166, 0.2)',
+                                borderColor: '#14b8a6',
+                                borderWidth: 2,
+                                tension: 0.3,
+                                fill: true
+                            }]
+                        };
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: capacityData,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    y: { beginAtZero: true }
+                                }
+                            }
+                        });
+                    </script>
+                {% else %}
+                    <p class="text-muted">No capacity records yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Backup Logs Card (scrollable) -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-archive me-2"></i>Backup Logs</span>
+                <a href="{{ url_for('add_backup', id=asset.id) }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-plus-lg me-1"></i>Add Backup
+                </a>
+            </div>
+            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                {% if asset.backup_logs %}
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in asset.backup_logs|sort(attribute='backup_date', reverse=True) %}
+                            <tr>
+                                <td>{{ backup.backup_date }}</td>
+                                <td>
+                                    {% if backup.status == 'Success' %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Success</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ backup.location or '—' }}</td>
+                                <td>{{ backup.notes or '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted">No backup logs yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('assets') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Assets
+</a>
+{% endblock %}

@@ -1,10 +1,120 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+</div>
+
+<div class="row g-4">
+    <!-- Summary Cards -->
+    <div class="col-md-4">
+        <div class="card dashboard-card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-server me-2"></i>Total Assets</h5>
+                <p class="card-value">{{ assets|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card dashboard-card" style="border-left-color: #1cc88a;">
+            <div class="card-body">
+                <h5 class="card-title" style="color: #1cc88a;"><i class="bi bi-check-circle me-2"></i>Up Assets (last ping)</h5>
+                <p class="card-value">{{ assets|selectattr('availability_logs', '!=', [])|list|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card dashboard-card" style="border-left-color: #e74a3b;">
+            <div class="card-body">
+                <h5 class="card-title" style="color: #e74a3b;"><i class="bi bi-exclamation-triangle me-2"></i>With Security Notes</h5>
+                <p class="card-value">{{ assets|selectattr('security_notes', '!=', [])|list|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>Recent Availability Checks
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('asset_detail', id=log.asset.id) }}" class="text-decoration-none">
+                                        <i class="bi bi-hdd-{{ 'network' if log.asset.asset_type == 'Server' else 'laptop' }} me-1"></i>
+                                        {{ log.asset.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if log.status == 'up' %}
+                                        <span class="badge bg-success"><i class="bi bi-arrow-up-circle me-1"></i>Up</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Down</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No availability checks yet. <a href="{{ url_for('assets') }}">Check some assets</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-shield-shaded me-2"></i>Recent Security Notes
+            </div>
+            <div class="card-body">
+                {% set notes = [] %}
+                {% for asset in assets %}
+                    {% for note in asset.security_notes %}
+                        {% set notes = notes.append(note) %}
+                    {% endfor %}
+                {% endfor %}
+                {% if notes %}
+                <ul class="list-group list-group-flush">
+                    {% for note in notes|sort(attribute='date', reverse=True) %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>
+                                <i class="bi bi-exclamation-diamond me-1 text-{{ 'danger' if note.severity == 'High' else 'warning' if note.severity == 'Medium' else 'info' }}"></i>
+                                <a href="{{ url_for('asset_detail', id=note.asset.id) }}">{{ note.asset.name }}</a>
+                            </strong>
+                            <span class="badge bg-{{ 'danger' if note.severity == 'High' else 'warning' if note.severity == 'Medium' else 'info' }}">
+                                {{ note.severity }}
+                            </span>
+                        </div>
+                        <p class="mb-0 text-muted small">{{ note.note[:50] }}...</p>
+                        <small class="text-muted">{{ note.date }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">No security notes yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

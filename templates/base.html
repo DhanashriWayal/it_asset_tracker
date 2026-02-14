@@ -1,10 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IT Asset Tracker</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-$END$
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-hdd-stack me-2"></i>IT Asset Tracker
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('assets') }}">
+                            <i class="bi bi-server me-1"></i>Assets
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('add_asset') }}">
+                            <i class="bi bi-plus-circle me-1"></i>Add Asset
+                        </a>
+                    </li>
+                </ul>
+                <!-- Theme Toggle Button -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-link nav-link" id="themeToggle">
+                            <i class="bi bi-brightness-high-fill" id="themeIcon"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Theme Toggle Script -->
+    <script>
+        (function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const body = document.body;
+
+            // Load saved theme from localStorage
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                body.classList.add('light-mode');
+                themeIcon.classList.remove('bi-brightness-high-fill');
+                themeIcon.classList.add('bi-moon-fill');
+            }
+
+            // Toggle theme on button click
+            themeToggle.addEventListener('click', () => {
+                if (body.classList.contains('light-mode')) {
+                    // Switch to dark
+                    body.classList.remove('light-mode');
+                    themeIcon.classList.remove('bi-moon-fill');
+                    themeIcon.classList.add('bi-brightness-high-fill');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    // Switch to light
+                    body.classList.add('light-mode');
+                    themeIcon.classList.remove('bi-brightness-high-fill');
+                    themeIcon.classList.add('bi-moon-fill');
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
